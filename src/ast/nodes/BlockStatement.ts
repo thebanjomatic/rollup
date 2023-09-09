@@ -6,6 +6,7 @@ import type ChildScope from '../scopes/ChildScope';
 import type Scope from '../scopes/Scope';
 import ExpressionStatement from './ExpressionStatement';
 import * as NodeType from './NodeType';
+import { Flag, isFlagSet, setFlag } from './shared/BitFlags';
 import { UNKNOWN_EXPRESSION } from './shared/Expression';
 import { type IncludeChildren, type Node, StatementBase, type StatementNode } from './shared/Node';
 
@@ -13,8 +14,19 @@ export default class BlockStatement extends StatementBase {
 	declare body: readonly StatementNode[];
 	declare type: NodeType.tBlockStatement;
 
-	private declare deoptimizeBody: boolean;
-	private directlyIncluded = false;
+	private get deoptimizeBody(): boolean {
+		return isFlagSet(this.flags, Flag.deoptimizeBody);
+	}
+	private set deoptimizeBody(value: boolean) {
+		this.flags = setFlag(this.flags, Flag.deoptimizeBody, value);
+	}
+
+	private get directlyIncluded(): boolean {
+		return isFlagSet(this.flags, Flag.directlyIncluded);
+	}
+	private set directlyIncluded(value: boolean) {
+		this.flags = setFlag(this.flags, Flag.directlyIncluded, value);
+	}
 
 	addImplicitReturnExpressionToScope(): void {
 		const lastStatement = this.body[this.body.length - 1];

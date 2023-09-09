@@ -7,6 +7,7 @@ import { EMPTY_PATH, UNKNOWN_PATH } from '../utils/PathTracker';
 import type MemberExpression from './MemberExpression';
 import type * as NodeType from './NodeType';
 import type VariableDeclaration from './VariableDeclaration';
+import { Flag, isFlagSet, setFlag } from './shared/BitFlags';
 import { UNKNOWN_EXPRESSION } from './shared/Expression';
 import {
 	type ExpressionNode,
@@ -18,11 +19,17 @@ import type { PatternNode } from './shared/Pattern';
 import { includeLoopBody } from './shared/loops';
 
 export default class ForOfStatement extends StatementBase {
-	declare await: boolean;
 	declare body: StatementNode;
 	declare left: VariableDeclaration | PatternNode | MemberExpression;
 	declare right: ExpressionNode;
 	declare type: NodeType.tForOfStatement;
+
+	get await(): boolean {
+		return isFlagSet(this.flags, Flag.await);
+	}
+	set await(value: boolean) {
+		this.flags = setFlag(this.flags, Flag.await, value);
+	}
 
 	createScope(parentScope: Scope): void {
 		this.scope = new BlockScope(parentScope);

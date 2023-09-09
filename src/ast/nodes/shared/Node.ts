@@ -20,6 +20,7 @@ import type ChildScope from '../../scopes/ChildScope';
 import { EMPTY_PATH, UNKNOWN_PATH } from '../../utils/PathTracker';
 import type Variable from '../../variables/Variable';
 import type * as NodeType from '../NodeType';
+import { Flag, isFlagSet, setFlag } from './BitFlags';
 import type { InclusionOptions } from './Expression';
 import { ExpressionEntity } from './Expression';
 
@@ -34,7 +35,7 @@ export interface Node extends Entity {
 	annotations?: acorn.Comment[];
 	context: AstContext;
 	end: number;
-	esTreeNode: GenericEsTreeNode | null;
+	esTreeNode?: GenericEsTreeNode;
 	included: boolean;
 	keys: string[];
 	needsBoundaries?: boolean;
@@ -134,7 +135,7 @@ export class NodeBase extends ExpressionEntity implements ExpressionNode {
 
 	context: AstContext;
 	declare end: number;
-	esTreeNode: acorn.Node | null;
+	esTreeNode?: acorn.Node;
 	keys: string[];
 	parent: Node | { context: AstContext; type: string };
 	declare scope: ChildScope;
@@ -144,13 +145,19 @@ export class NodeBase extends ExpressionEntity implements ExpressionNode {
 	 * This will be populated during initialise if setAssignedValue is called.
 	 */
 	protected declare assignmentInteraction: NodeInteractionAssigned;
+
 	/**
 	 * Nodes can apply custom deoptimizations once they become part of the
 	 * executed code. To do this, they must initialize this as false, implement
 	 * applyDeoptimizations and call this from include and hasEffects if they have
 	 * custom handlers
 	 */
-	protected deoptimized = false;
+	protected get deoptimized(): boolean {
+		return isFlagSet(this.flags, Flag.deoptimized);
+	}
+	protected set deoptimized(value: boolean) {
+		this.flags = setFlag(this.flags, Flag.deoptimized, value);
+	}
 
 	constructor(
 		esTreeNode: GenericEsTreeNode,
@@ -161,7 +168,9 @@ export class NodeBase extends ExpressionEntity implements ExpressionNode {
 		super();
 		// Nodes can opt-in to keep the AST if needed during the build pipeline.
 		// Avoid true when possible as large AST takes up memory.
-		this.esTreeNode = keepEsTreeNode ? esTreeNode : null;
+		if (keepEsTreeNode) {
+			this.esTreeNode = esTreeNode;
+		}
 		this.keys = keys[esTreeNode.type] || getAndCreateKeys(esTreeNode);
 		this.parent = parent;
 		this.context = parent.context;
@@ -265,8 +274,12 @@ export class NodeBase extends ExpressionEntity implements ExpressionNode {
 
 	parseNode(esTreeNode: GenericEsTreeNode, keepEsTreeNodeKeys?: string[]): void {
 		for (const [key, value] of Object.entries(esTreeNode)) {
-			// That way, we can override this function to add custom initialisation and then call super.parseNode
+			// Skip properties defined on the class already.
+			// This way, we can override this function to add custom initialisation and then call super.parseNode
+			// Note: this doesn't skip properties with defined getters/setters which we use to pack wrap booleans
+			// in bitfields. Those are still assigned from the value in the esTreeNode.
 			if (this.hasOwnProperty(key)) continue;
+
 			if (key.charCodeAt(0) === 95 /* _ */) {
 				if (key === ANNOTATION_KEY) {
 					const annotations = value as RollupAnnotation[];
