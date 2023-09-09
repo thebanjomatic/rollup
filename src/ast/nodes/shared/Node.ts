@@ -132,7 +132,9 @@ export class NodeBase extends ExpressionEntity implements ExpressionNode {
 	declare annotationPure?: boolean;
 	declare annotations?: RollupAnnotation[];
 
-	context: AstContext;
+	get context(): AstContext {
+		return this.scope.context;
+	}
 	declare end: number;
 	esTreeNode?: acorn.Node;
 	parent: Node | { context: AstContext; type: string };
@@ -171,7 +173,7 @@ export class NodeBase extends ExpressionEntity implements ExpressionNode {
 		}
 		ensureKeysAreDefinedForNodeType(esTreeNode);
 		this.parent = parent;
-		this.context = parent.context;
+		this.scope = parentScope;
 		this.createScope(parentScope);
 		this.parseNode(esTreeNode);
 		this.initialise();

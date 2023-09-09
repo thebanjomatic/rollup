@@ -3,7 +3,6 @@ import { type RenderOptions, renderStatementList } from '../../utils/renderHelpe
 import type { HasEffectsContext, InclusionContext } from '../ExecutionContext';
 import BlockScope from '../scopes/BlockScope';
 import type ChildScope from '../scopes/ChildScope';
-import type Scope from '../scopes/Scope';
 import ExpressionStatement from './ExpressionStatement';
 import * as NodeType from './NodeType';
 import { Flag, isFlagSet, setFlag } from './shared/BitFlags';
@@ -35,10 +34,10 @@ export default class BlockStatement extends StatementBase {
 		}
 	}
 
-	createScope(parentScope: Scope): void {
+	createScope(parentScope: ChildScope): void {
 		this.scope = (this.parent as Node).preventChildBlockScope
 			? (parentScope as ChildScope)
-			: new BlockScope(parentScope);
+			: new BlockScope(parentScope, parentScope.context);
 	}
 
 	hasEffects(context: HasEffectsContext): boolean {

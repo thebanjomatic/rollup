@@ -2,7 +2,7 @@ import type MagicString from 'magic-string';
 import { NO_SEMICOLON, type RenderOptions } from '../../utils/renderHelpers';
 import type { InclusionContext } from '../ExecutionContext';
 import BlockScope from '../scopes/BlockScope';
-import type Scope from '../scopes/Scope';
+import type ChildScope from '../scopes/ChildScope';
 import { EMPTY_PATH, UNKNOWN_PATH } from '../utils/PathTracker';
 import type MemberExpression from './MemberExpression';
 import type * as NodeType from './NodeType';
@@ -31,8 +31,8 @@ export default class ForOfStatement extends StatementBase {
 		this.flags = setFlag(this.flags, Flag.await, value);
 	}
 
-	createScope(parentScope: Scope): void {
-		this.scope = new BlockScope(parentScope);
+	createScope(parentScope: ChildScope): void {
+		this.scope = new BlockScope(parentScope, parentScope.context);
 	}
 
 	hasEffects(): boolean {
