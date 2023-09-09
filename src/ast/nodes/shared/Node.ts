@@ -15,7 +15,7 @@ import {
 } from '../../ExecutionContext';
 import type { NodeInteractionAssigned } from '../../NodeInteractions';
 import { INTERACTION_ASSIGNED } from '../../NodeInteractions';
-import { getAndCreateKeys, keys } from '../../keys';
+import { ensureKeysAreDefinedForNodeType, keys } from '../../keys';
 import type ChildScope from '../../scopes/ChildScope';
 import { EMPTY_PATH, UNKNOWN_PATH } from '../../utils/PathTracker';
 import type Variable from '../../variables/Variable';
@@ -37,7 +37,6 @@ export interface Node extends Entity {
 	end: number;
 	esTreeNode?: GenericEsTreeNode;
 	included: boolean;
-	keys: string[];
 	needsBoundaries?: boolean;
 	parent: Node | { type?: string };
 	preventChildBlockScope?: boolean;
@@ -136,7 +135,6 @@ export class NodeBase extends ExpressionEntity implements ExpressionNode {
 	context: AstContext;
 	declare end: number;
 	esTreeNode?: acorn.Node;
-	keys: string[];
 	parent: Node | { context: AstContext; type: string };
 	declare scope: ChildScope;
 	declare start: number;
@@ -171,7 +169,7 @@ export class NodeBase extends ExpressionEntity implements ExpressionNode {
 		if (keepEsTreeNode) {
 			this.esTreeNode = esTreeNode;
 		}
-		this.keys = keys[esTreeNode.type] || getAndCreateKeys(esTreeNode);
+		ensureKeysAreDefinedForNodeType(esTreeNode);
 		this.parent = parent;
 		this.context = parent.context;
 		this.createScope(parentScope);
@@ -191,7 +189,7 @@ export class NodeBase extends ExpressionEntity implements ExpressionNode {
 	 * that require the scopes to be populated with variables.
 	 */
 	bind(): void {
-		for (const key of this.keys) {
+		for (const key of keys[this.type]) {
 			const value = (this as GenericEsTreeNode)[key];
 			if (Array.isArray(value)) {
 				for (const child of value) {
@@ -213,7 +211,7 @@ export class NodeBase extends ExpressionEntity implements ExpressionNode {
 
 	hasEffects(context: HasEffectsContext): boolean {
 		if (!this.deoptimized) this.applyDeoptimizations();
-		for (const key of this.keys) {
+		for (const key of keys[this.type]) {
 			const value = (this as GenericEsTreeNode)[key];
 			if (value === null) continue;
 			if (Array.isArray(value)) {
@@ -239,7 +237,7 @@ export class NodeBase extends ExpressionEntity implements ExpressionNode {
 	): void {
 		if (!this.deoptimized) this.applyDeoptimizations();
 		this.included = true;
-		for (const key of this.keys) {
+		for (const key of keys[this.type]) {
 			const value = (this as GenericEsTreeNode)[key];
 			if (value === null) continue;
 			if (Array.isArray(value)) {
@@ -322,7 +320,7 @@ export class NodeBase extends ExpressionEntity implements ExpressionNode {
 	}
 
 	render(code: MagicString, options: RenderOptions): void {
-		for (const key of this.keys) {
+		for (const key of keys[this.type]) {
 			const value = (this as GenericEsTreeNode)[key];
 			if (value === null) continue;
 			if (Array.isArray(value)) {
@@ -350,7 +348,7 @@ export class NodeBase extends ExpressionEntity implements ExpressionNode {
 	 */
 	protected applyDeoptimizations(): void {
 		this.deoptimized = true;
-		for (const key of this.keys) {
+		for (const key of keys[this.type]) {
 			const value = (this as GenericEsTreeNode)[key];
 			if (value === null) continue;
 			if (Array.isArray(value)) {
